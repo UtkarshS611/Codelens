@@ -4,71 +4,63 @@ import { githubApp } from "@/lib/github/app";
 import { parsePullRequest } from "@/lib/github/parsePullRequest";
 import { getPullRequestFiles } from "@/lib/github/getPullRequestFiles";
 
-export async function POST(
-    request: NextRequest
-) {
+import { buildReviewContext } from "@/lib/review/buildReviewContext";
+
+export async function POST(request: NextRequest) {
     try {
         const payload = await request.json();
 
-        //check to process only pull request events.
         if (!payload.pull_request) {
             return NextResponse.json({
                 message: "Not a pull request event",
             });
         }
 
-        //convert raw data to PullRequestData type.
         const pr = parsePullRequest(payload);
 
-        console.log("Pull Request:", {
-            action: pr.action,
-            repository: pr.repository.fullName,
-            number: pr.pullRequest.number,
-            title: pr.pullRequest.title,
-        });
 
-        //octokit client authentication 
+        //create octokit client for specific repo that has codelens installed.
         const octokit = await githubApp.getInstallationOctokit(
             pr.installationId
         );
 
-        //retrieve pr info from github
-        const { data: pullRequest } = await octokit.rest.pulls.get({
-            owner: pr.repository.owner,
-            repo: pr.repository.name,
-            pull_number: pr.pullRequest.number,
-        });
 
-        console.log("PR fetched:", {
-            number: pullRequest.number,
-            title: pullRequest.title,
-            state: pullRequest.state,
-            headSha: pullRequest.head.sha,
-            baseSha: pullRequest.base.sha,
-        });
-
-        //fetch changed files, patches and the source code of the files in PR
+        //retrieve PR files, patches and source code changes
         const files = await getPullRequestFiles(
             octokit,
             pr
         );
 
-        console.log(`Found ${files.length} changed files`);
 
-        //only for test - PRINT THE FILES
-        for (const file of files) {
-            console.log({
-                path: file.path,
-                status: file.status,
-                additions: file.additions,
-                deletions: file.deletions,
-                changes: file.changes,
-                hasPatch: Boolean(file.patch),
-                hasSource: Boolean(file.source),
-            });
-        }
+        //prepare review context for AI review, including PR metadata and file changes
+        const reviewContext = buildReviewContext(
+            pr,
+            files
+        );
 
-        //return the PR info and the changed files as JSON response - CONVERT TO AI REVIEW LATRE
+        console.log(reviewContext)
+
+
+        // ============================================================
+        // 7. AI REVIEW
+        // ============================================================
+        // NEXT STAGE:
+        //
+        // reviewContext
+        //      ↓
+        // AI Reviewer
+        //      ↓
+        // Review Result
+        //
+        // This will eventually replace the temporary response below.
+
+
+        // ============================================================
+        // 8. TEMPORARY RESPONSE
+        // ============================================================
+        // Used only during development/testing.
+        // Later this will be replaced by the review pipeline.
+
         return NextResponse.json({
             success: true,
 
@@ -87,10 +79,7 @@ export async function POST(
             files,
         });
     } catch (error) {
-        console.error(
-            "GitHub webhook error:",
-            error
-        );
+        console.error("GitHub webhook error:", error);
 
         return NextResponse.json(
             {
