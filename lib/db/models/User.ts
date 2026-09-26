@@ -3,8 +3,12 @@ import mongoose, { Model, Schema } from "mongoose";
 export interface IUser {
     firstName: string;
     lastName: string;
+
     email: string;
-    password: string;
+    password?: string;
+
+    githubId?: number;
+    githubUsername?: string;
 
     createdAt: Date;
     updatedAt: Date;
@@ -17,11 +21,13 @@ const UserSchema = new Schema<IUser>(
             required: true,
             trim: true,
         },
+
         lastName: {
             type: String,
             required: true,
             trim: true,
         },
+
         email: {
             type: String,
             required: true,
@@ -29,10 +35,21 @@ const UserSchema = new Schema<IUser>(
             lowercase: true,
             trim: true,
         },
+
         password: {
             type: String,
-            required: true,
-        }
+        },
+
+        githubId: {
+            type: Number,
+            unique: true,
+            sparse: true,
+        },
+
+        githubUsername: {
+            type: String,
+            trim: true,
+        },
     },
     {
         timestamps: true,

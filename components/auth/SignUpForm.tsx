@@ -1,13 +1,17 @@
 "use client";
 
-import { SyntheticEvent, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
-import Logo from "@/components/landing/Logo";
-import Link from "next/link";
+import { signIn } from "next-auth/react";
+
+import { SyntheticEvent, useState } from "react";
 
 import { Eye, EyeOff } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+
+import Logo from "@/components/landing/Logo";
 
 export default function SignUpForm() {
     const router = useRouter();
@@ -62,7 +66,7 @@ export default function SignUpForm() {
                 return;
             }
 
-            router.push("/login");
+            router.push("/dashboard");
         } catch {
             setError(
                 "Something went wrong. Please try again."
@@ -70,7 +74,13 @@ export default function SignUpForm() {
         } finally {
             setLoading(false);
         }
-    }
+    };
+
+    const handleGithubSignup = async () => {
+        await signIn("github", {
+            callbackUrl: "/dashboard",
+        });
+    };
 
     return (
         <div className="w-full max-w-sm space-y-6 border rounded-2xl py-6 px-4 bg-background">
@@ -85,6 +95,7 @@ export default function SignUpForm() {
                 <Button
                     variant={"secondary"}
                     className="w-full"
+                    onClick={handleGithubSignup}
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
