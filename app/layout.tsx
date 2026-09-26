@@ -6,6 +6,7 @@ import {
   Fjalla_One,
   Courier_Prime,
   Roboto,
+  JetBrains_Mono
 } from "next/font/google";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 
@@ -15,10 +16,10 @@ const display = Fjalla_One({
   variable: "--font-display",
 });
 
-const courier = Courier_Prime({
+const mono = JetBrains_Mono({
   subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-courier",
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800"],
+  variable: "--font-mono",
 });
 
 const roboto = Roboto({
@@ -30,13 +31,16 @@ const roboto = Roboto({
 export const metadata: Metadata = {
   title: "CodeLens - AI based PR review tool",
   description: "Codelens is a AI based PR review tool that helps developers to review code faster and more efficiently.",
+  icons:{
+    icon: "/svgs/terminal.svg"
+  }
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={cn("h-full antialiased", display.variable, courier.variable, roboto.variable)}
+      className={cn("h-full antialiased", display.variable, mono.variable, roboto.variable)}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
@@ -46,9 +50,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           enableSystem
           disableTransitionOnChange
         >
-          <main>
-            {children}
-          </main>
+          {children}
         </ThemeProvider>
       </body>
     </html>
