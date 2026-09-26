@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 
 import {
   Fjalla_One,
-  Courier_Prime,
   Roboto,
   JetBrains_Mono
 } from "next/font/google";

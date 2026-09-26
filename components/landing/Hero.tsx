@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { Button, buttonVariants } from "../ui/button";
-import TextHighlight from "./TextHighlight";
 import Image from "next/image";
+
+import { buttonVariants } from "@/components/ui/button";
+
+import TextHighlight from "@/components/landing/TextHighlight";
 
 export default function Hero() {
     return (
