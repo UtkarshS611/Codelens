@@ -56,13 +56,13 @@ export default function Header() {
                     CodeLens
                 </div>
             </Link>
-            <NavigationMenu className={"hidden lg:block"}>
+            <NavigationMenu className={"hidden xl:block"}>
                 <NavigationMenuList>
                     <NavigationMenuItem>
                         {links.map((link, index) => (
                             <NavigationMenuLink
                                 key={index}
-                                className={navigationMenuTriggerStyle()}
+                                className={`${navigationMenuTriggerStyle()} hover:bg-primary/50`}
                                 render={<Link href={link.href}>{link.label}</Link>}
                             />
                         ))}
@@ -71,20 +71,20 @@ export default function Header() {
             </NavigationMenu>
             <div className="hidden xl:flex items-center gap-4 ">
                 <Link
-                    href={"/"}
+                    href={"/dashboard"}
                     className={`${buttonVariants({ variant: "default", size: "lg" })}`}
                 >
                     Get Started
                 </Link>
                 <Link
-                    href={"/"}
+                    href={"/signin"}
                     className={`${buttonVariants({ variant: "outline", size: "lg" })}`}
                 >
                     Sign In
                 </Link>
                 <ThemeToggle />
             </div>
-            <div className="lg:hidden flex items-center gap-4">
+            <div className="xl:hidden flex items-center gap-4">
                 <ThemeToggle />
                 <Sheet>
                     <SheetTrigger render={<Button><Menu /></Button>} />
@@ -100,20 +100,26 @@ export default function Header() {
                                 </div>
                             </Link>
                         </SheetHeader>
-                        {links.map((link, index) => (
-                            <div key={index}>
-                                {link.label}
-                            </div>
-                        ))}
+                        <div className="px-6 flex flex-col gap-2">
+                            {links.map((link, index) => (
+                                <Link
+                                    href={link.href}
+                                    key={index}
+                                    className="hover:bg-primary/50 py-1 rounded-md px-1"
+                                >
+                                    {link.label}
+                                </Link>
+                            ))}
+                        </div>
                         <SheetFooter>
                             <Link
-                                href={"/"}
+                                href={"/dashboard"}
                                 className={`${buttonVariants({ variant: "default", size: "lg" })}`}
                             >
                                 Get Started
                             </Link>
                             <Link
-                                href={"/"}
+                                href={"/signin"}
                                 className={`${buttonVariants({ variant: "secondary", size: "lg" })}`}
                             >
                                 Sign In

@@ -1,34 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { githubApp } from "@/lib/github/app";
-
 import { parsePullRequest } from "@/lib/github/parsePullRequest";
 import { getPullRequestFiles } from "@/lib/github/getPullRequestFiles";
 
 import { buildReviewContext } from "@/lib/review/buildReviewContext";
+import { aiReviewer } from "@/lib/review/aiReviewer";
 
 import { connectDB } from "@/lib/db/mongoose";
 
+import { Repository } from "@/lib/db/models/Repository";
+import { PullRequest } from "@/lib/db/models/PullRequest";
+import { Review } from "@/lib/db/models/Review";
+
 import { findOrCreateRepository } from "@/lib/db/services/repositoryService";
 import { findOrCreatePullRequest } from "@/lib/db/services/pullRequestService";
-import { createReview } from "@/lib/db/services/reviewService";
+import { createReview, updateReview } from "@/lib/db/services/reviewService";
+
 
 export async function POST(request: NextRequest) {
+    let activeReviewId: string | null = null;
+
     try {
+        //extract the github payload
         const payload = await request.json();
 
-        if (!payload.pull_request) {
+        //only catch pull requests
+        if (!payload.pull_request || !payload.repository) {
             return NextResponse.json({
+                success: true,
                 message: "Not a pull request event",
             });
         }
 
-        //parse the github raw payload to usable structure
+        // check for reviewing only PRs that opened/reopened or synchronized
+        const supportedActions = [
+            "opened",
+            "reopened",
+            "synchronize",
+        ];
+
+        if (!supportedActions.includes(payload.action)) {
+            return NextResponse.json({
+                success: true,
+                message: `Ignored pull request action: ${payload.action}`,
+            });
+        }
+
+        // parse the github payload
         const pr = parsePullRequest(payload);
 
         await connectDB();
 
-        //create or find the repository in the database
+        // create repo
         const repository = await findOrCreateRepository({
             githubId: payload.repository.id,
             installationId: pr.installationId,
@@ -38,7 +62,7 @@ export async function POST(request: NextRequest) {
             defaultBranch: payload.repository.default_branch,
         });
 
-        //fint or create the pull request in the database
+        // create/find pull request
         const pullRequest = await findOrCreatePullRequest({
             githubId: payload.pull_request.id,
             repositoryId: repository._id,
@@ -54,61 +78,111 @@ export async function POST(request: NextRequest) {
             headSha: pr.pullRequest.headSha,
         });
 
-        //authenticate with GitHub using the installation ID to get an Octokit instance
+        // check if a review already exists for this pull request and commit SHA
+        let review = await Review.findOne({
+            pullRequestId: pullRequest._id,
+            commitSha: pr.pullRequest.headSha,
+        });
+
+        if (review) {
+            if (
+                review.status === "completed" ||
+                review.status === "queued" ||
+                review.status === "processing"
+            ) {
+                return NextResponse.json({
+                    success: true,
+                    message: "Review already exists",
+                    review: {
+                        id: review._id,
+                        status: review.status,
+                        commitSha: review.commitSha,
+                    },
+                });
+            }
+
+            /*
+             * A failed review can be retried when GitHub
+             * redelivers the event.
+             */
+            await updateReview(review._id, {
+                status: "processing",
+            });
+        } else {
+            // create record tfor the review
+            review = await createReview({
+                pullRequestId: pullRequest._id,
+                commitSha: pr.pullRequest.headSha,
+            });
+
+            await updateReview(review._id, {
+                status: "processing",
+            });
+        }
+
+        activeReviewId = review._id.toString();
+
+        /// github auth
         const octokit = await githubApp.getInstallationOctokit(
             pr.installationId
         );
 
-        //retrieve PR files, patches and source code for review context
+        // fetch changes in files, patches and actual source code
         const files = await getPullRequestFiles(
             octokit,
             pr
         );
 
-        // build the review context for AI reviewr
+        // review context build
         const reviewContext = buildReviewContext(
             pr,
             files
         );
 
-        //create review queue record for the pull request in the database
-        const review = await createReview({
-            pullRequestId: pullRequest._id,
-            commitSha: pr.pullRequest.headSha,
-        });
+        // run the review engine
+        const result = await aiReviewer(reviewContext);
 
+        // persist the ai findings in the database
+        const findingsToSave = result.findings.map((finding) => ({
+            file: finding.file,
 
-        // ============================================================
-        // 11. AI REVIEW
-        // ============================================================
-        //
-        // NEXT STAGE:
-        //
-        // reviewContext
-        //      ↓
-        // AI Reviewer
-        //      ↓
-        // ReviewResult
-        //      ↓
-        // updateReview()
-        //
-        // The AI reviewer will be added here.
+            line: finding.startLine ?? undefined,
+            startLine: finding.startLine ?? undefined,
+            endLine: finding.endLine ?? undefined,
 
+            severity: finding.severity,
+            category: finding.category,
 
-        // ============================================================
-        // 12. TEMPORARY DEVELOPMENT RESPONSE
-        // ============================================================
-        // This response is only for verifying the complete
-        // GitHub + MongoDB pipeline.
-        //
-        // Later, this will be replaced by the AI review workflow.
+            title: finding.title,
+            description: finding.description,
 
+            suggestion: finding.suggestion ?? undefined,
+            confidence: finding.confidence ?? undefined,
+        })
+        );
+
+        const completedReview = await updateReview(
+            review._id,
+            {
+                status: "completed",
+                summary: result.summary,
+                findings: findingsToSave,
+                completedAt: new Date(),
+            }
+        );
+
+        if (!completedReview) {
+            throw new Error(
+                "Review was generated but could not be saved."
+            );
+        }
+
+        // return the completed review
         return NextResponse.json({
             success: true,
 
             repository: {
                 id: repository._id,
-                githubId: repository.githubId,
                 fullName: repository.fullName,
             },
 
@@ -116,18 +190,15 @@ export async function POST(request: NextRequest) {
                 id: pullRequest._id,
                 number: pr.pullRequest.number,
                 title: pr.pullRequest.title,
-                author: pr.pullRequest.author,
-                baseBranch: pr.pullRequest.baseBranch,
-                headBranch: pr.pullRequest.headBranch,
-                baseSha: pr.pullRequest.baseSha,
                 headSha: pr.pullRequest.headSha,
-                status: pullRequest.status,
             },
 
             review: {
-                id: review._id,
-                status: review.status,
-                commitSha: review.commitSha,
+                id: completedReview._id,
+                status: completedReview.status,
+                commitSha: completedReview.commitSha,
+                summary: completedReview.summary,
+                findings: completedReview.findings,
             },
 
             files: files.map((file) => ({
@@ -141,11 +212,32 @@ export async function POST(request: NextRequest) {
             })),
         });
     } catch (error) {
+        console.error("GitHub webhook error:", error);
 
-        console.error(
-            "GitHub webhook error:",
-            error
-        );
+        /*
+         * Mark the review as failed when a review record
+         * has already been created.
+         */
+        if (activeReviewId) {
+            try {
+                await connectDB();
+
+                await updateReview(
+                    new (await import("mongoose")).default.Types.ObjectId(
+                        activeReviewId
+                    ),
+                    {
+                        status: "failed",
+                    }
+                );
+            } catch (updateError) {
+                console.error(
+                    "Failed to mark review as failed:",
+                    updateError
+                );
+            }
+        }
+
         return NextResponse.json(
             {
                 success: false,

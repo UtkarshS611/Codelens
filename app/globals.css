@@ -151,7 +151,7 @@ h1 {
 
 @media (max-width: 1536px) {
   .hero-image {
-    background-image: url("/hero/heroGradient.jpg");
+    background-image: url("/hero/heroGradient.avif");
     background-repeat: no-repeat;
     background-size: cover;
     background-position: center center;
