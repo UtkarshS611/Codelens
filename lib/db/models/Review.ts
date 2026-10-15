@@ -1,10 +1,27 @@
+
 import mongoose, { Schema, Model, Types } from "mongoose";
 
-export type ReviewStatus = "queued" | "processing" | "completed" | "failed";
+export type ReviewStatus =
+    | "queued"
+    | "processing"
+    | "completed"
+    | "failed";
 
-export type FindingSeverity = "critical" | "high" | "medium" | "low" | "info";
+export type FindingSeverity =
+    | "critical"
+    | "high"
+    | "medium"
+    | "low"
+    | "info";
 
-export type FindingCategory = "bug" | "security" | "performance" | "maintainability" | "style" | "logic" | "other";
+export type FindingCategory =
+    | "bug"
+    | "security"
+    | "performance"
+    | "maintainability"
+    | "style"
+    | "logic"
+    | "other";
 
 export interface IReviewFinding {
     file: string;
@@ -30,6 +47,11 @@ export interface IReview {
     model?: string;
     tokensUsed?: number;
     processingTimeMs?: number;
+
+    // GitHub publication details
+    githubReviewId?: number;
+    githubReviewUrl?: string;
+
     createdAt: Date;
     completedAt?: Date;
     updatedAt: Date;
@@ -110,7 +132,7 @@ const ReviewFindingSchema = new Schema<IReviewFinding>(
     },
     {
         _id: true,
-    }
+    },
 );
 
 const ReviewSchema = new Schema<IReview>(
@@ -161,10 +183,22 @@ const ReviewSchema = new Schema<IReview>(
         completedAt: {
             type: Date,
         },
+
+        // ID returned by GitHub's createReview API
+        githubReviewId: {
+            type: Number,
+            default: undefined,
+        },
+
+        // HTML URL of the published GitHub review
+        githubReviewUrl: {
+            type: String,
+            default: undefined,
+        },
     },
     {
         timestamps: true,
-    }
+    },
 );
 
 ReviewSchema.index(
@@ -174,10 +208,9 @@ ReviewSchema.index(
     },
     {
         unique: true,
-    }
+    },
 );
 
-export const Review = (mongoose.models.Review as Model<IReview>) || mongoose.model<IReview>(
-    "Review",
-    ReviewSchema
-);
+export const Review =
+    (mongoose.models.Review as Model<IReview>) ||
+    mongoose.model<IReview>("Review", ReviewSchema);

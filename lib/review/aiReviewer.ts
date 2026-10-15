@@ -11,8 +11,7 @@ import type {
 // Configuration
 // -----------------------------------------------------------------------------
 
-const OLLAMA_BASE_URL =
-    process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
 
 const MODEL = process.env.OLLAMA_MODEL || "qwen2.5-coder:7b";
 
