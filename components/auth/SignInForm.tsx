@@ -1,12 +1,17 @@
 "use client";
 
-import { SyntheticEvent, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import Logo from "@/components/landing/Logo";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { signIn } from "next-auth/react";
+
+import { SyntheticEvent, useState } from "react";
+
 import { Eye, EyeOff } from "lucide-react";
+
+
+import { Button } from "@/components/ui/button";
+import Logo from "@/components/landing/Logo";
 
 export default function SignInForm() {
     const router = useRouter();
@@ -23,37 +28,30 @@ export default function SignInForm() {
         setTypePassword((prev) => (prev === "password" ? "text" : "password"));
     }
 
-    const handleSubmit = async (event: SyntheticEvent) => {
+
+    async function handleSubmit(
+        event: SyntheticEvent
+    ) {
         event.preventDefault();
 
         setError("");
         setLoading(true);
 
         try {
-            const response = await fetch("/api/signin", {
-                method: "POST",
+            const result = await signIn("credentials", {
+                email,
+                password,
+                redirect: false,
+            });
 
-                headers: {
-                    "Content-Type": "application/json",
-                },
-
-                body: JSON.stringify({
-                    email,
-                    password,
-                }),
-            }
-            );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-
-                setError(data.error || "Signin failed");
+            if (!result || result.error
+            ) {
+                setError("Invalid email or password");
                 return;
             }
 
-            //temporary redirect
-            router.push("/");
+            router.push("/dashboard");
+            router.refresh();
         } catch {
             setError(
                 "Something went wrong. Please try again."
@@ -61,6 +59,13 @@ export default function SignInForm() {
         } finally {
             setLoading(false);
         }
+    }
+
+    async function handleGitHubLogin() {
+        await signIn("github", {
+            callbackUrl:
+                "/dashboard",
+        });
     }
 
     return (
@@ -75,7 +80,8 @@ export default function SignInForm() {
             <div>
                 <Button
                     variant={"secondary"}
-                    className="w-full"
+                    className="w-full cursor-pointer"
+                    onClick={handleGitHubLogin}
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"

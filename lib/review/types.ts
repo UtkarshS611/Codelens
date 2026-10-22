@@ -1,4 +1,4 @@
-import type { PullRequestData, ReviewFile } from "@/lib/github/types";
+import type { ReviewFile } from "@/lib/github/types";
 
 export interface ReviewContext {
     repository: {
@@ -33,4 +33,31 @@ export interface ReviewContextFile {
 
     patch: string | null;
     source: string | null;
+}
+
+export type FindingSeverity = "critical" | "high" | "medium" | "low" | "info";
+
+export type FindingCategory = "bug" | "security" | "performance" | "maintainability" | "style" | "logic" | "other";
+
+export interface ReviewFinding {
+    file: string;
+
+    startLine: number | null;
+    endLine: number | null;
+
+    severity: FindingSeverity;
+    category: FindingCategory;
+
+    title: string;
+    description: string;
+
+    suggestion: string | null;
+
+    confidence: number | null;
+}
+
+export interface ReviewResult {
+    summary: string;
+
+    findings: ReviewFinding[];
 }
