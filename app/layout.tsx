@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import {
   Fjalla_One,
   Roboto,
-  JetBrains_Mono
+  JetBrains_Mono,
 } from "next/font/google";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 
