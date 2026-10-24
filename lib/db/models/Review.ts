@@ -1,27 +1,11 @@
 
 import mongoose, { Schema, Model, Types } from "mongoose";
 
-export type ReviewStatus =
-    | "queued"
-    | "processing"
-    | "completed"
-    | "failed";
+export type ReviewStatus = "queued" | "processing" | "completed" | "failed";
 
-export type FindingSeverity =
-    | "critical"
-    | "high"
-    | "medium"
-    | "low"
-    | "info";
+export type FindingSeverity = "critical" | "high" | "medium" | "low" | "info";
 
-export type FindingCategory =
-    | "bug"
-    | "security"
-    | "performance"
-    | "maintainability"
-    | "style"
-    | "logic"
-    | "other";
+export type FindingCategory = "bug" | "security" | "performance" | "maintainability" | "style" | "logic" | "other";
 
 export interface IReviewFinding {
     file: string;
@@ -48,7 +32,6 @@ export interface IReview {
     tokensUsed?: number;
     processingTimeMs?: number;
 
-    // GitHub publication details
     githubReviewId?: number;
     githubReviewUrl?: string;
 
@@ -90,42 +73,28 @@ const ReviewFindingSchema = new Schema<IReviewFinding>(
 
         category: {
             type: String,
-            enum: [
-                "bug",
-                "security",
-                "performance",
-                "maintainability",
-                "style",
-                "logic",
-                "other",
-            ],
+            enum: ["bug", "security", "performance", "maintainability", "style", "logic", "other"],
             required: true,
         },
-
         title: {
             type: String,
             required: true,
         },
-
         description: {
             type: String,
             required: true,
         },
-
         suggestion: {
             type: String,
         },
-
         code: {
             type: String,
         },
-
         confidence: {
             type: Number,
             min: 0,
             max: 1,
         },
-
         githubCommentId: {
             type: Number,
         },
@@ -142,55 +111,38 @@ const ReviewSchema = new Schema<IReview>(
             ref: "PullRequest",
             required: true,
         },
-
         commitSha: {
             type: String,
             required: true,
         },
-
         status: {
             type: String,
-            enum: [
-                "queued",
-                "processing",
-                "completed",
-                "failed",
-            ],
+            enum: ["queued", "processing", "completed", "failed"],
             default: "queued",
         },
-
         summary: {
             type: String,
         },
-
         findings: {
             type: [ReviewFindingSchema],
             default: [],
         },
-
         model: {
             type: String,
         },
-
         tokensUsed: {
             type: Number,
         },
-
         processingTimeMs: {
             type: Number,
         },
-
         completedAt: {
             type: Date,
         },
-
-        // ID returned by GitHub's createReview API
         githubReviewId: {
             type: Number,
             default: undefined,
         },
-
-        // HTML URL of the published GitHub review
         githubReviewUrl: {
             type: String,
             default: undefined,
@@ -211,6 +163,4 @@ ReviewSchema.index(
     },
 );
 
-export const Review =
-    (mongoose.models.Review as Model<IReview>) ||
-    mongoose.model<IReview>("Review", ReviewSchema);
+export const Review = (mongoose.models.Review as Model<IReview>) || mongoose.model<IReview>("Review", ReviewSchema);
